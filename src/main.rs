@@ -96,3 +96,7 @@ impl RingSizeGenerator for ISORingSizeGenerater {
         }
     }
 }
+
+trait RingSizeConverter {
+    fn convert(ringSize: RingSize, to: RingSizeDefinition) -> RingSize;
+}
