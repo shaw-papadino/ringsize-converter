@@ -1,84 +1,98 @@
 use std::cmp::{PartialEq};
+use std::f32::consts::PI;
 
 fn main() {
-    let ring1 = ISORing::from(48.7);
-    let ring2 = ISORing::from(49.49);
-    if ring1 == ring2 {
-        println!("eq")
-    } else {
-        println!("not eq")
+    let ring1 = Ring::from(Diameter::new(13.0));
+    let ring2 = Ring::from(Diameter::new(15.0));
+    println!("{:?}, {:?}", ring1, ring2);
+
+    let ringSize = ISORingSizeGenerater::generate(ring1);
+    println!("{:?}", ringSize);
+}
+
+#[derive(Debug, Clone)]
+struct Diameter {
+    size: f32
+}
+
+impl Diameter {
+    //TODO: エラー処理をかく
+    pub fn new(size: f32) -> Self {
+        Diameter { size }
+    }
+}
+#[derive(Debug, Clone)]
+struct Circumference {
+    size: f32
+}
+
+impl Circumference {
+    //TODO: エラー処理をかく
+    pub fn new(size: f32) -> Self {
+        Circumference { size }
     }
 }
 
-// ISO国際規格とJCS規格の変換処理
 #[derive(Debug, Clone)]
-struct ISORing {
-    size: String,
-    circumference: f32
+struct Ring {
+    diameter: Diameter,
+    circumference: Circumference,
 }
 
-impl ISORing {
-    // NOTE: Intoを使ってStringと&strを両方受け取れるようにしている
-    pub fn new(size: impl Into<String>, circumference: f32) -> Self {
-        Self {
-            size: size.into(),
+impl Ring {
+    pub fn new(diameter: Diameter, circumference: Circumference) -> Self {
+        Ring { diameter, circumference }
+    }
+
+    pub fn from(diameter: Diameter) -> Self {
+        let circumference = Ring::circumferenceFrom(&diameter);
+        Ring {
+            diameter,
             circumference
         }
     }
-
-    pub fn from(circumference: f32) -> Self {
-        let size = circumference.round();
-        ISORing::new(
-            size.to_string(),
-            circumference
-        )
+    fn circumferenceFrom(diameter: &Diameter) -> Circumference {
+        Circumference {size: diameter.size * PI}
     }
+    // pub fn from(circumference: Circumference) -> Self {
+    //     let diameter = Ring::diameterFrom(circumference);
+    //     Ring {
+    //         diameter,
+    //         circumference
+    //     }
+    // }
+
+    // fn diameterFrom(circumference: &Circumference) -> Diameter {
+    //     Diameter { size: circumference.size / PI }
+    // }
+
 }
 
-impl PartialEq for ISORing {
-    fn eq(&self, other: &ISORing) -> bool {
-        println!("{} == {}", self.size, other.size);
-        &self.size == &other.size
-    }
-
-    fn ne(&self, other: &ISORing) -> bool {
-        &self.size != &other.size
-    }
+#[derive(Debug)]
+enum RingSizeDefinition {
+    ISO,
+    JIS,
+    JCS,
+    EU
 }
 
-
-// TODO: JCS規格の実装
-#[derive(Debug, Clone)]
-struct JCSRing {
-    size: String,
-    circumference: f32
+#[derive(Debug)]
+struct RingSize {
+    definition: RingSizeDefinition,
+    size: f32
 }
 
-impl JCSRing {
-    // NOTE: Intoを使ってStringと&strを両方受け取れるようにしている
-    pub fn new(size: impl Into<String>, circumference: f32) -> Self {
-        Self {
-            size: size.into(),
-            circumference
+trait RingSizeGenerator {
+    fn generate(ring: Ring) -> RingSize;
+}
+
+struct ISORingSizeGenerater {}
+impl RingSizeGenerator for ISORingSizeGenerater {
+    fn generate(ring: Ring) -> RingSize {
+        let size = (ring.circumference.size * 10.0).round() / 10.0;
+        RingSize {
+            definition: RingSizeDefinition::ISO,
+            size
         }
-    }
-
-    pub fn from(circumference: f32) -> Self {
-        let size = circumference.round();
-        JCSRing::new(
-            size.to_string(),
-            circumference
-        )
-    }
-}
-
-impl PartialEq for JCSRing {
-    fn eq(&self, other: &JCSRing) -> bool {
-        println!("{} == {}", self.size, other.size);
-        &self.size == &other.size
-    }
-
-    fn ne(&self, other: &JCSRing) -> bool {
-        &self.size != &other.size
     }
 }
