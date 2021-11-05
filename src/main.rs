@@ -1,9 +1,10 @@
-use std::cmp::{PartialEq};
 use std::f32::consts::PI;
+use std::cmp::PartialEq;
+use std::error::Error;
 use std::fmt;
 
 fn main() {
-    let ring1 = Ring::from(Diameter::new(18.6));
+    let ring1 = Ring::from(Diameter::new(18.3));
     println!("{:?}", ring1);
 
     let isoRingSize = ISORingSizeGenerater::generate(&ring1);
@@ -46,31 +47,37 @@ impl Ring {
         Ring { diameter, circumference }
     }
 
-    pub fn from(diameter: Diameter) -> Self {
+    fn circumferenceFrom(diameter: &Diameter) -> Circumference {
+        Circumference {size: diameter.size * PI}
+    }
+
+    fn diameterFrom(circumference: &Circumference) -> Diameter {
+        Diameter { size: circumference.size / PI }
+    }
+
+}
+
+impl From<Diameter> for Ring {
+    fn from(diameter: Diameter) -> Self {
         let circumference = Ring::circumferenceFrom(&diameter);
         Ring {
             diameter,
             circumference
         }
     }
-    fn circumferenceFrom(diameter: &Diameter) -> Circumference {
-        Circumference {size: diameter.size * PI}
-    }
-    // pub fn from(circumference: Circumference) -> Self {
-    //     let diameter = Ring::diameterFrom(circumference);
-    //     Ring {
-    //         diameter,
-    //         circumference
-    //     }
-    // }
-
-    // fn diameterFrom(circumference: &Circumference) -> Diameter {
-    //     Diameter { size: circumference.size / PI }
-    // }
-
 }
 
-#[derive(Debug)]
+impl From<Circumference> for Ring {
+    fn from(circumference: Circumference) -> Self {
+        let diameter = Ring::diameterFrom(&circumference);
+        Ring {
+            diameter,
+            circumference
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 enum RingSizeDefinition {
     ISO,
     JIS,
@@ -81,20 +88,13 @@ enum RingSizeDefinition {
 #[derive(Debug)]
 struct RingSize {
     definition: RingSizeDefinition,
-    size: f32
-}
-
-impl fmt::Debug for RingSize {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Point")
-         .field("x", &self.x)
-         .field("y", &self.y)
-         .finish()
-    }
+    size: std::string::String,
+    circumference: Circumference
 }
 
 trait RingSizeGenerator {
     fn generate(ring: &Ring) -> RingSize;
+    fn from(ring_size: &RingSize) -> RingSize;
 }
 
 struct ISORingSizeGenerater {}
@@ -103,7 +103,17 @@ impl RingSizeGenerator for ISORingSizeGenerater {
         let size = (ring.circumference.size * 10.0).round() / 10.0;
         RingSize {
             definition: RingSizeDefinition::ISO,
-            size
+            size: size.to_string(),
+            circumference: ring.circumference
+        }
+    }
+
+    fn from(ring_size: &RingSize) -> RingSize {
+        let size = (ring_size.circumference.size * 10.0).round() / 10.0;
+        RingSize {
+            definition: RingSizeDefinition::ISO,
+            size: size.to_string(),
+            circumference: ring_size.circumference
         }
     }
 }
@@ -114,11 +124,47 @@ impl RingSizeGenerator for JCSRingSizeGenerater {
         let size = ((3.0 / PI) * ring.circumference.size - 38.0).round();
         RingSize {
             definition: RingSizeDefinition::JCS,
-            size
+            size: size.to_string(),
+            circumference: ring.circumference
+        }
+    }
+
+    fn from(ring_size: &RingSize) -> RingSize {
+        let size = ((3.0 / PI) * ring_size.circumference.size - 38.0).round();
+        RingSize {
+            definition: RingSizeDefinition::ISO,
+            size: size.to_string(),
+            circumference: ring_size.circumference
         }
     }
 }
 
+#[derive(Debug)]
+struct ConvertError {
+    cause: std::string::String,
+}
+
+impl fmt::Display for ConvertError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ConvertError!")
+    }
+}
+
+impl Error for ConvertError {}
+
 trait RingSizeConverter {
-    fn convert(ring_size: RingSize, to: RingSizeDefinition) -> RingSize;
+    fn convert(ring_size: RingSize, to: RingSizeDefinition) -> Result<RingSize, ConvertError> {
+        if ring_size.definition == to {
+            return Ok(ring_size)
+        }
+        match to {
+            RingSizeDefinition::ISO => {
+                Ok(ISORingSizeGenerater::generate(&Ring::from(ring_size.circumference)))
+            }
+            RingSizeDefinition::JCS => {
+                Ok(JCSRingSizeGenerater::generate(&Ring::from(ring_size.circumference)))
+            }
+            _ => Err(ConvertError {cause: String::from("missing RingSizeDefinition")})
+        }
+    }
 }
