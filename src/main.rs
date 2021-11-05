@@ -1,13 +1,15 @@
 use std::cmp::{PartialEq};
 use std::f32::consts::PI;
+use std::fmt;
 
 fn main() {
-    let ring1 = Ring::from(Diameter::new(13.0));
-    let ring2 = Ring::from(Diameter::new(15.0));
-    println!("{:?}, {:?}", ring1, ring2);
+    let ring1 = Ring::from(Diameter::new(18.6));
+    println!("{:?}", ring1);
 
-    let ringSize = ISORingSizeGenerater::generate(ring1);
-    println!("{:?}", ringSize);
+    let isoRingSize = ISORingSizeGenerater::generate(&ring1);
+    let jcsRingSize = JCSRingSizeGenerater::generate(&ring1);
+    println!("{:?}", isoRingSize);
+    println!("{:?}", jcsRingSize);
 }
 
 #[derive(Debug, Clone)]
@@ -82,13 +84,22 @@ struct RingSize {
     size: f32
 }
 
+impl fmt::Debug for RingSize {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Point")
+         .field("x", &self.x)
+         .field("y", &self.y)
+         .finish()
+    }
+}
+
 trait RingSizeGenerator {
-    fn generate(ring: Ring) -> RingSize;
+    fn generate(ring: &Ring) -> RingSize;
 }
 
 struct ISORingSizeGenerater {}
 impl RingSizeGenerator for ISORingSizeGenerater {
-    fn generate(ring: Ring) -> RingSize {
+    fn generate(ring: &Ring) -> RingSize {
         let size = (ring.circumference.size * 10.0).round() / 10.0;
         RingSize {
             definition: RingSizeDefinition::ISO,
@@ -97,6 +108,17 @@ impl RingSizeGenerator for ISORingSizeGenerater {
     }
 }
 
+struct JCSRingSizeGenerater {}
+impl RingSizeGenerator for JCSRingSizeGenerater {
+    fn generate(ring: &Ring) -> RingSize {
+        let size = ((3.0 / PI) * ring.circumference.size - 38.0).round();
+        RingSize {
+            definition: RingSizeDefinition::JCS,
+            size
+        }
+    }
+}
+
 trait RingSizeConverter {
-    fn convert(ringSize: RingSize, to: RingSizeDefinition) -> RingSize;
+    fn convert(ring_size: RingSize, to: RingSizeDefinition) -> RingSize;
 }
