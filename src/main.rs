@@ -1,21 +1,23 @@
-use std::f32::consts::PI;
 use std::cmp::PartialEq;
 use std::error::Error;
+use std::f32::consts::PI;
 use std::fmt;
 
 fn main() {
-    let ring1 = Ring::from(Diameter::new(18.3));
+    let ring1 = Ring::from(Diameter::new(18.5));
     println!("{:?}", ring1);
 
-    let isoRingSize = ISORingSizeGenerater::generate(&ring1);
-    let jcsRingSize = JCSRingSizeGenerater::generate(&ring1);
-    println!("{:?}", isoRingSize);
-    println!("{:?}", jcsRingSize);
+    let iso_ring_size = ISORingSizeGenerater::generate(&ring1);
+    let jcs_ring_size = JCSRingSizeGenerater::generate(&ring1);
+    println!("{:?}", iso_ring_size);
+    println!("{:?}", jcs_ring_size);
+    let converted_jcs_ring_size = RingSizeConverter::convert(iso_ring_size, RingSizeDefinition::JCS).unwrap();
+    println!("{:?}, {:?}", jcs_ring_size, converted_jcs_ring_size);
 }
 
 #[derive(Debug, Clone)]
 struct Diameter {
-    size: f32
+    size: f32,
 }
 
 impl Diameter {
@@ -24,9 +26,9 @@ impl Diameter {
         Diameter { size }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct Circumference {
-    size: f32
+    size: f32,
 }
 
 impl Circumference {
@@ -44,35 +46,41 @@ struct Ring {
 
 impl Ring {
     pub fn new(diameter: Diameter, circumference: Circumference) -> Self {
-        Ring { diameter, circumference }
+        Ring {
+            diameter,
+            circumference,
+        }
     }
 
-    fn circumferenceFrom(diameter: &Diameter) -> Circumference {
-        Circumference {size: diameter.size * PI}
+    fn circumference_from(diameter: &Diameter) -> Circumference {
+        Circumference {
+            size: diameter.size * PI,
+        }
     }
 
-    fn diameterFrom(circumference: &Circumference) -> Diameter {
-        Diameter { size: circumference.size / PI }
+    fn diameter_from(circumference: &Circumference) -> Diameter {
+        Diameter {
+            size: circumference.size / PI,
+        }
     }
-
 }
 
 impl From<Diameter> for Ring {
     fn from(diameter: Diameter) -> Self {
-        let circumference = Ring::circumferenceFrom(&diameter);
+        let circumference = Ring::circumference_from(&diameter);
         Ring {
             diameter,
-            circumference
+            circumference,
         }
     }
 }
 
 impl From<Circumference> for Ring {
     fn from(circumference: Circumference) -> Self {
-        let diameter = Ring::diameterFrom(&circumference);
+        let diameter = Ring::diameter_from(&circumference);
         Ring {
             diameter,
-            circumference
+            circumference,
         }
     }
 }
@@ -82,14 +90,14 @@ enum RingSizeDefinition {
     ISO,
     JIS,
     JCS,
-    EU
+    EU,
 }
 
 #[derive(Debug)]
 struct RingSize {
     definition: RingSizeDefinition,
     size: std::string::String,
-    circumference: Circumference
+    circumference: Circumference,
 }
 
 trait RingSizeGenerator {
@@ -104,7 +112,7 @@ impl RingSizeGenerator for ISORingSizeGenerater {
         RingSize {
             definition: RingSizeDefinition::ISO,
             size: size.to_string(),
-            circumference: ring.circumference
+            circumference: ring.circumference,
         }
     }
 
@@ -113,7 +121,7 @@ impl RingSizeGenerator for ISORingSizeGenerater {
         RingSize {
             definition: RingSizeDefinition::ISO,
             size: size.to_string(),
-            circumference: ring_size.circumference
+            circumference: ring_size.circumference,
         }
     }
 }
@@ -125,7 +133,7 @@ impl RingSizeGenerator for JCSRingSizeGenerater {
         RingSize {
             definition: RingSizeDefinition::JCS,
             size: size.to_string(),
-            circumference: ring.circumference
+            circumference: ring.circumference,
         }
     }
 
@@ -134,7 +142,7 @@ impl RingSizeGenerator for JCSRingSizeGenerater {
         RingSize {
             definition: RingSizeDefinition::ISO,
             size: size.to_string(),
-            circumference: ring_size.circumference
+            circumference: ring_size.circumference,
         }
     }
 }
@@ -152,19 +160,22 @@ impl fmt::Display for ConvertError {
 
 impl Error for ConvertError {}
 
-trait RingSizeConverter {
+struct RingSizeConverter {}
+impl RingSizeConverter {
     fn convert(ring_size: RingSize, to: RingSizeDefinition) -> Result<RingSize, ConvertError> {
         if ring_size.definition == to {
-            return Ok(ring_size)
+            return Ok(ring_size);
         }
         match to {
-            RingSizeDefinition::ISO => {
-                Ok(ISORingSizeGenerater::generate(&Ring::from(ring_size.circumference)))
-            }
-            RingSizeDefinition::JCS => {
-                Ok(JCSRingSizeGenerater::generate(&Ring::from(ring_size.circumference)))
-            }
-            _ => Err(ConvertError {cause: String::from("missing RingSizeDefinition")})
+            RingSizeDefinition::ISO => Ok(ISORingSizeGenerater::generate(&Ring::from(
+                ring_size.circumference,
+            ))),
+            RingSizeDefinition::JCS => Ok(JCSRingSizeGenerater::generate(&Ring::from(
+                ring_size.circumference,
+            ))),
+            _ => Err(ConvertError {
+                cause: String::from("missing RingSizeDefinition"),
+            }),
         }
     }
 }
