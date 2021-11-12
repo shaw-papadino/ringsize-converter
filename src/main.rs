@@ -1,7 +1,9 @@
+mod error;
+
+use crate::error::ConvertError;
 use std::cmp::PartialEq;
 use std::error::Error;
 use std::f32::consts::PI;
-use std::fmt;
 
 fn main() {
     let ring1 = Ring::from(Diameter::new(18.5));
@@ -11,7 +13,8 @@ fn main() {
     let jcs_ring_size = JCSRingSizeGenerater::generate(&ring1);
     println!("{:?}", iso_ring_size);
     println!("{:?}", jcs_ring_size);
-    let converted_jcs_ring_size = RingSizeConverter::convert(iso_ring_size, RingSizeDefinition::JCS).unwrap();
+    let converted_jcs_ring_size =
+        RingSizeConverter::convert(iso_ring_size, RingSizeDefinition::JCS).unwrap();
     println!("{:?}, {:?}", jcs_ring_size, converted_jcs_ring_size);
 }
 
@@ -147,22 +150,9 @@ impl RingSizeGenerator for JCSRingSizeGenerater {
     }
 }
 
-#[derive(Debug)]
-struct ConvertError {
-    cause: std::string::String,
-}
-
-impl fmt::Display for ConvertError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "ConvertError!")
-    }
-}
-
-impl Error for ConvertError {}
-
 struct RingSizeConverter {}
 impl RingSizeConverter {
-    fn convert(ring_size: RingSize, to: RingSizeDefinition) -> Result<RingSize, ConvertError> {
+    fn convert(ring_size: RingSize, to: RingSizeDefinition) -> Result<RingSize, Box<dyn Error>> {
         if ring_size.definition == to {
             return Ok(ring_size);
         }
@@ -173,9 +163,9 @@ impl RingSizeConverter {
             RingSizeDefinition::JCS => Ok(JCSRingSizeGenerater::generate(&Ring::from(
                 ring_size.circumference,
             ))),
-            _ => Err(ConvertError {
+            _ => Err(Box::new(ConvertError {
                 cause: String::from("missing RingSizeDefinition"),
-            }),
+            })),
         }
     }
 }
